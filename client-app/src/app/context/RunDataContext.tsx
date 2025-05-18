@@ -40,11 +40,15 @@ export interface RunDataContextType {
   runData: {
     runs: SlayTheSpireRun[];
     count: number;
+    validRunsCount?: number;
+    abandonedRunsCount?: number;
   } | null;
   setRunData: React.Dispatch<
     React.SetStateAction<{
       runs: SlayTheSpireRun[];
       count: number;
+      validRunsCount?: number;
+      abandonedRunsCount?: number;
     } | null>
   >;
   directoryPath: string;
@@ -65,6 +69,8 @@ export function RunDataProvider({ children }: { children: React.ReactNode }) {
   const [runData, setRunData] = useState<{
     runs: SlayTheSpireRun[];
     count: number;
+    validRunsCount?: number;
+    abandonedRunsCount?: number;
   } | null>(null);
   const [directoryPath, setDirectoryPath] = useState<string>("");
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);

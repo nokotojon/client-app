@@ -20,11 +20,17 @@ export class RunController {
 
       const runs = await RunService.loadRunsFromDirectory(directoryPath);
 
+      // 捨てラン情報を追加
+      const validRuns = RunService.excludeAbandonedRuns(runs);
+      const abandonedRuns = runs.filter(run => !run.victory && run.floor_reached < 4);
+
       res.status(StatusCodes.OK).json({
         success: true,
         data: {
           runs,
-          count: runs.length
+          count: runs.length,
+          validRunsCount: validRuns.length,
+          abandonedRunsCount: abandonedRuns.length
         }
       });
     } catch (error) {
@@ -41,7 +47,7 @@ export class RunController {
    */
   public static async getRunStatsByCharacter(req: Request, res: Response): Promise<void> {
     try {
-      const { directoryPath } = req.body;
+      const { directoryPath, excludeAbandonedRuns = true } = req.body;
 
       if (!directoryPath) {
         res.status(StatusCodes.BAD_REQUEST).json({
@@ -53,12 +59,21 @@ export class RunController {
 
       const runs = await RunService.loadRunsFromDirectory(directoryPath);
       
+      // 捨てランを除外するかどうか
+      const runsToProcess = excludeAbandonedRuns 
+        ? RunService.excludeAbandonedRuns(runs)
+        : runs;
+      
       // キャラクターごとの統計を計算
-      const characters = [...new Set(runs.map(run => run.character_chosen))];
+      const characters = [...new Set(runsToProcess.map(run => run.character_chosen))];
       
       const stats = characters.map(character => {
-        const characterRuns = RunService.filterRunsByCharacter(runs, character);
+        const characterRuns = RunService.filterRunsByCharacter(runsToProcess, character);
         const victories = RunService.getVictoryRuns(characterRuns);
+        
+        // 全てのランを含めた統計も計算
+        const allCharacterRuns = RunService.filterRunsByCharacter(runs, character);
+        const abandonedRuns = allCharacterRuns.filter(run => !run.victory && run.floor_reached < 4);
         
         return {
           character,
@@ -68,7 +83,10 @@ export class RunController {
           averageFloor: characterRuns.length > 0 
             ? characterRuns.reduce((sum, run) => sum + run.floor_reached, 0) / characterRuns.length 
             : 0,
-          sortOrder: RunService.getCharacterSortOrder(character)
+          sortOrder: RunService.getCharacterSortOrder(character),
+          // 捨てラン情報
+          allRunsCount: allCharacterRuns.length,
+          abandonedRunsCount: abandonedRuns.length
         };
       });
       
@@ -79,7 +97,9 @@ export class RunController {
         success: true,
         data: {
           stats,
-          totalRuns: runs.length
+          totalRuns: runsToProcess.length,
+          allRunsCount: runs.length,
+          excludedAbandonedRuns: excludeAbandonedRuns
         }
       });
     } catch (error) {
@@ -96,7 +116,7 @@ export class RunController {
    */
   public static async getWinRateByAscension(req: Request, res: Response): Promise<void> {
     try {
-      const { directoryPath, character } = req.body;
+      const { directoryPath, character, excludeAbandonedRuns = true } = req.body;
 
       if (!directoryPath) {
         res.status(StatusCodes.BAD_REQUEST).json({
@@ -108,10 +128,15 @@ export class RunController {
 
       const runs = await RunService.loadRunsFromDirectory(directoryPath);
       
+      // 捨てランを除外するかどうか
+      const processedRuns = excludeAbandonedRuns 
+        ? RunService.excludeAbandonedRuns(runs)
+        : runs;
+      
       // キャラクターでフィルタリング（指定されていれば）
       const filteredRuns = character 
-        ? RunService.filterRunsByCharacter(runs, character)
-        : runs;
+        ? RunService.filterRunsByCharacter(processedRuns, character)
+        : processedRuns;
       
       // アセンションレベルごとの統計を計算
       const ascensionLevels = [...new Set(filteredRuns.map(run => run.ascension_level))].sort((a, b) => a - b);
@@ -120,11 +145,21 @@ export class RunController {
         const levelRuns = RunService.filterRunsByAscensionLevel(filteredRuns, level);
         const victories = RunService.getVictoryRuns(levelRuns);
         
+        // 全てのランを含めた統計も計算
+        const allLevelRuns = RunService.filterRunsByAscensionLevel(runs, level);
+        if (character) {
+          allLevelRuns.filter(run => run.character_chosen === character);
+        }
+        const abandonedRuns = allLevelRuns.filter(run => !run.victory && run.floor_reached < 4);
+        
         return {
           ascensionLevel: level,
           totalRuns: levelRuns.length,
           victories: victories.length,
-          winRate: levelRuns.length > 0 ? (victories.length / levelRuns.length) * 100 : 0
+          winRate: levelRuns.length > 0 ? (victories.length / levelRuns.length) * 100 : 0,
+          // 捨てラン情報
+          allRunsCount: allLevelRuns.length,
+          abandonedRunsCount: abandonedRuns.length
         };
       });
 
@@ -133,7 +168,9 @@ export class RunController {
         data: {
           character: character || 'All Characters',
           stats,
-          totalRuns: filteredRuns.length
+          totalRuns: filteredRuns.length,
+          allRunsCount: runs.length,
+          excludedAbandonedRuns: excludeAbandonedRuns
         }
       });
     } catch (error) {

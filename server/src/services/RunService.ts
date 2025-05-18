@@ -171,4 +171,22 @@ export class RunService {
   public static getVictoryRuns(runs: SlayTheSpireRun[]): SlayTheSpireRun[] {
     return runs.filter(run => run.victory);
   }
+
+  /**
+   * 捨てランを除外する
+   * @param runs すべてのrunデータ
+   * @param minFloor 最低到達階層（この値未満は捨てランと判断）
+   * @returns 捨てラン以外のrunデータの配列
+   */
+  public static excludeAbandonedRuns(runs: SlayTheSpireRun[], minFloor: number = 4): SlayTheSpireRun[] {
+    return runs.filter(run => {
+      // 勝利しているランは必ず含める
+      if (run.victory) {
+        return true;
+      }
+      
+      // 敗北したランは階層チェック
+      return run.floor_reached >= minFloor;
+    });
+  }
 } 
