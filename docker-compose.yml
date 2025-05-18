@@ -1,0 +1,38 @@
+version: "3.8"
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "3010:3000"
+    volumes:
+      - ./server:/app
+      - server_node_modules_volume:/app/node_modules
+      # 開発時はこちらを使用してローカルのSlay the Spireデータを読み込む
+      # - ${SLAY_DATA_DIR:-~/Library/Application Support/SlayTheSpire/runs}:/runs
+      # サンプルデータを使用する場合はこちら
+      - ./server/sample-data:/runs
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+    restart: always
+
+  client-app:
+    build:
+      context: ./client-app
+      dockerfile: Dockerfile
+    ports:
+      - "3011:3000"
+    volumes:
+      - ./client-app:/app
+      - client_app_node_modules_volume:/app/node_modules
+    environment:
+      - WATCHPACK_POLLING=true
+    restart: always
+    tty: true
+    stdin_open: true
+
+volumes:
+  server_node_modules_volume:
+  client_app_node_modules_volume:

@@ -1,0 +1,49 @@
+# Node.js
+node_modules
+npm-debug.log
+dist
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Docker
+.docker
+*.log
+
+# Next.js
+.next
+out
+
+# Build
+build
+dist
+
+# Mac
+.DS_Store
+
+# IDE / Editors
+.idea
+.vscode
+*.swp
+*.swo
+.vs/
+
+# Logs
+logs
+*.log
+
+# Slay the Spire Game Data
+**/runs/*.run
+**/runs/*.json
+
+# Testing
+coverage
+.nyc_output
+
+# Temporary files
+tmp
+temp
+.tmp
+.temp 
