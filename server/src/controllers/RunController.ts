@@ -67,9 +67,13 @@ export class RunController {
           winRate: characterRuns.length > 0 ? (victories.length / characterRuns.length) * 100 : 0,
           averageFloor: characterRuns.length > 0 
             ? characterRuns.reduce((sum, run) => sum + run.floor_reached, 0) / characterRuns.length 
-            : 0
+            : 0,
+          sortOrder: RunService.getCharacterSortOrder(character)
         };
       });
+      
+      // キャラクター順でソート
+      stats.sort((a, b) => a.sortOrder - b.sortOrder);
 
       res.status(StatusCodes.OK).json({
         success: true,

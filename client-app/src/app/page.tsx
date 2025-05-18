@@ -1,18 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useRunData } from "./context/RunDataContext";
 
 const queryClient = new QueryClient();
-
-interface RunData {
-  runs: Array<{
-    character_chosen: string;
-    ascension_level: number;
-    victory: boolean;
-  }>;
-  count: number;
-}
 
 export default function Home() {
   return (
@@ -26,13 +19,29 @@ export default function Home() {
 }
 
 function DirectoryForm() {
-  const [directoryPath, setDirectoryPath] = useState("");
+  const router = useRouter();
+  const {
+    directoryPath,
+    setDirectoryPath,
+    setRunData,
+    runData,
+    isDataLoaded,
+    clearSavedData,
+  } = useRunData();
   const [isLoading, setIsLoading] = useState(false);
-  const [runData, setRunData] = useState<RunData | null>(null);
   const [toastMessage, setToastMessage] = useState<{
     status: string;
     message: string;
   } | null>(null);
+
+  // 保存データがある場合は自動的に分析ページに遷移
+  useEffect(() => {
+    // 現在のパスを取得（ホームページにいる場合のみリダイレクト）
+    const path = window.location.pathname;
+    if (path === "/" && isDataLoaded && runData) {
+      router.push("/analysis");
+    }
+  }, [isDataLoaded, runData, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +73,11 @@ function DirectoryForm() {
           status: "success",
           message: `${data.data.count}件の実行データを読み込みました`,
         });
+
+        // データを読み込んだら分析ページに遷移
+        setTimeout(() => {
+          router.push("/analysis");
+        }, 1000); // 1秒後に遷移（トーストメッセージを表示する時間）
       } else {
         setToastMessage({
           status: "error",
@@ -79,6 +93,15 @@ function DirectoryForm() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // 保存データをクリアする
+  const handleClearData = () => {
+    clearSavedData();
+    setToastMessage({
+      status: "success",
+      message: "保存データをクリアしました",
+    });
   };
 
   return (
@@ -109,15 +132,28 @@ function DirectoryForm() {
               例: macOSの場合 ~/Library/ApplicationSupport/SlayTheSpire/runs
             </p>
           </div>
-          <button
-            type="submit"
-            className={`px-4 py-2 bg-teal-500 text-white rounded hover:bg-teal-600 ${
-              isLoading ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-            disabled={isLoading}
-          >
-            {isLoading ? "読み込み中..." : "データを読み込む"}
-          </button>
+
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className={`px-4 py-2 bg-teal-500 text-white rounded hover:bg-teal-600 flex-grow ${
+                isLoading ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+              disabled={isLoading}
+            >
+              {isLoading ? "読み込み中..." : "データを読み込む"}
+            </button>
+
+            {isDataLoaded && (
+              <button
+                type="button"
+                onClick={handleClearData}
+                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+              >
+                保存データをクリア
+              </button>
+            )}
+          </div>
         </div>
 
         {runData && (
