@@ -16,6 +16,7 @@ export interface SlayTheSpireRun {
   score: number;
   play_id: string;
   local_time: string;
+  formatted_time?: string; // フォーマットされた日時文字列
   is_daily: boolean;
   is_trial: boolean;
   is_endless: boolean;
@@ -51,6 +52,46 @@ export interface SlayTheSpireRun {
   [key: string]: any;
 }
 
+/**
+ * Slay the SpireのYYYYMMDDHHMMSS形式の日時文字列をDate形式に変換する関数
+ * @param dateString YYYYMMDDHHMMSSの形式の文字列
+ * @returns フォーマットされた日時文字列（YYYY-MM-DD HH:MM:SS）
+ */
+export function parseSlayTheSpireDate(dateString: string): string {
+  // 正規表現で日付形式をチェック
+  if (!/^\d{14}$/.test(dateString)) {
+    // 14桁の数字でない場合はそのまま返す
+    return dateString;
+  }
+
+  try {
+    // YYYYMMDDHHMMSSを分解
+    const year = dateString.substring(0, 4);
+    const month = dateString.substring(4, 6);
+    const day = dateString.substring(6, 8);
+    const hour = dateString.substring(8, 10);
+    const minute = dateString.substring(10, 12);
+    const second = dateString.substring(12, 14);
+    
+    // ISO形式の日時文字列に変換（YYYY-MM-DDTHH:MM:SS）
+    const isoString = `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+    
+    // Date型に変換して正しくパースできるか確認
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) {
+      // 無効な日付の場合はそのまま返す
+      return dateString;
+    }
+    
+    // フォーマットした日付を返す
+    return date.toLocaleString();
+  } catch (e) {
+    // パースに失敗した場合はそのまま返す
+    console.error("Failed to parse date:", e);
+    return dateString;
+  }
+}
+
 // Slay the Spireのrunファイルを解析する関数
 export function parseRunFile(fileContent: string): SlayTheSpireRun {
   try {
@@ -60,6 +101,12 @@ export function parseRunFile(fileContent: string): SlayTheSpireRun {
     // 必要なフィールドの確認と適切なデフォルト値の設定
     if (!runData.character_chosen) {
       throw new Error('Invalid run file format: missing character_chosen field');
+    }
+    
+    // local_timeフィールドを処理して、フォーマットされた日時を追加
+    let formattedTime = '';
+    if (runData.local_time) {
+      formattedTime = parseSlayTheSpireDate(runData.local_time);
     }
     
     // インターフェースに合わせて整形して返す
@@ -76,6 +123,7 @@ export function parseRunFile(fileContent: string): SlayTheSpireRun {
       score: runData.score || 0,
       play_id: runData.play_id || '',
       local_time: runData.local_time || '',
+      formatted_time: formattedTime, // フォーマットされた日時を追加
       is_daily: runData.is_daily || false,
       is_trial: runData.is_trial || false,
       is_endless: runData.is_endless || false,
